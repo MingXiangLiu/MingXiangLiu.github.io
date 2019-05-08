@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="google" content="notranslate">
     <meta name="keywords" content="Fechin,"> 
-    
+    <meta name="description" content="ArrayList源码分析前言ArrayList可以说是每一个学java的人使用最多最熟练的集合了，但是知其然不知其所以然。关于ArrayList的具体实现，一些基本的都也知道，譬如数组实现，线程不,"> 
     <meta name="author" content="John Doe"> 
     <link rel="alternative" href="atom.xml" title="Hexo" type="application/atom+xml"> 
     <link rel="icon" href="/img/favicon.png"> 
@@ -60,7 +60,39 @@
 
         </div>
         <div class="content markdown">
-            
+            <h2 id="ArrayList源码分析"><a href="#ArrayList源码分析" class="headerlink" title="ArrayList源码分析"></a>ArrayList源码分析</h2><h5 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h5><p>ArrayList可以说是每一个学java的人使用最多最熟练的集合了，但是知其然不知其所以然。关于ArrayList的具体实现，一些基本的都也知道，譬如数组实现，线程不安全等等，但是更加具体的就很少去了解了，例如：初始化的长度，扩容等。</p>
+<p>本篇主要通过一些对源码的分析，讲解几个ArrayList常见的方法，和Vector的比较，以及线程安全并且效率高效的集合CopyOnWriteArrayList</p>
+<pre><code>//实例化一个ArrayList集合
+ArrayList list = new ArrayList();
+</code></pre><p> 实例化一个ArrayList集合你知道背后发生了什么吗？</p>
+<p> ok,看一下构造方法</p>
+<pre><code> /**
+ * Constructs an empty list with an initial capacity of ten.
+ */
+public ArrayList() {
+    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+}
+</code></pre><p> 🤥DEFAULTCAPACITY_EMPTY_ELEMENTDATA 是什么鬼？ 很明显是个常量，那我们看一下ArrayList的属性</p>
+<p> 首先ArrayList默认容量为10</p>
+<pre><code> /**
+ * Default initial capacity.
+ */
+private static final int DEFAULT_CAPACITY = 10;
+</code></pre><p>属性 EMPTY_ELEMENTDATA 定义一个空实例的共享空数组实例。</p>
+<pre><code>/**
+ * Shared empty array instance used for empty instances.
+ */
+private static final Object[] EMPTY_ELEMENTDATA = {};
+</code></pre><p>属性DEFAULTCAPACITY_EMPTY_ELEMENTDATA 定义一个共享空数组实例，用于默认大小的空实例。将其与EMPTY_ELEMENTDATA区分开来，以了解扩容多少<br>添加第一个元素时。</p>
+<pre><code>/**
+ * Shared empty array instance used for default sized empty instances. We
+ * distinguish this from EMPTY_ELEMENTDATA to know how much to inflate when
+ * first element is added.
+ */
+private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+</code></pre><p>属性 elementData 存储ArrayList元素的数组缓冲区。ArrayList的容量是这个数组缓冲区的长度。任何<br>使用elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA实例化ArrayList时，将在添加第一个元素时扩展为DEFAULT_CAPACITY，也就是10，那现在我们就清楚构造方法中代码是什么意思了。</p>
+<p>打卡———下班</p>
+
             <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
             <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
                 <source type="audio/mpeg" src>
@@ -92,7 +124,7 @@
     </div>
     
         <div class="side">
-            
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ArrayList源码分析"><span class="toc-number">1.</span> <span class="toc-text">ArrayList源码分析</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#前言"><span class="toc-number">1.0.0.1.</span> <span class="toc-text">前言</span></a></li></ol></li></ol>
         </div>
     
 </div>
