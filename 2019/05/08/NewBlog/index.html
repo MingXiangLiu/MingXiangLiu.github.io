@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang class="loading">
+<head><meta name="generator" content="Hexo 3.8.0">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ArrayList源码分析 - Hexo</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="google" content="notranslate">
+    <meta name="keywords" content="Fechin,"> 
+    <meta name="description" content="ArrayList源码分析(JDK1.8)前言ArrayList可以说是每一个学java的人使用最多最熟练的集合了，但是知其然不知其所以然。关于ArrayList的具体实现，一些基本的都也知道，譬如,"> 
+    <meta name="author" content="John Doe"> 
+    <link rel="alternative" href="atom.xml" title="Hexo" type="application/atom+xml"> 
+    <link rel="icon" href="/img/favicon.png"> 
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+    <link rel="stylesheet" href="/css/diaspora.css">
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({
+              google_ad_client: "ca-pub-8691406134231910",
+              enable_page_level_ads: true
+         });
+    </script>
+    <script async custom-element="amp-auto-ads" src="https://cdn.ampproject.org/v0/amp-auto-ads-0.1.js">
+    </script>
+</head>
+</html>
+<body class="loading">
+    <span id="config-title" style="display:none">Hexo</span>
+    <div id="loader"></div>
+    <div id="single">
+    <div id="top" style="display: block;">
+    <div class="bar" style="width: 0;"></div>
+    <a class="icon-home image-icon" href="javascript:;" data-url="http://yoursite.com"></a>
+    <div title="播放/暂停" class="icon-play"></div>
+    <h3 class="subtitle">ArrayList源码分析</h3>
+    <div class="social">
+        <!--<div class="like-icon">-->
+            <!--<a href="javascript:;" class="likeThis active"><span class="icon-like"></span><span class="count">76</span></a>-->
+        <!--</div>-->
+        <div>
+            <div class="share">
+                <a title="获取二维码" class="icon-scan" href="javascript:;"></a>
+            </div>
+            <div id="qr"></div>
+        </div>
+    </div>
+    <div class="scrollbar"></div>
+</div>
+
+    <div class="section">
+        <div class="article">
+    <div class="main">
+        <h1 class="title">ArrayList源码分析</h1>
+        <div class="stuff">
+            <span>五月 08, 2019</span>
+            
+
+        </div>
+        <div class="content markdown">
+            <h2 id="ArrayList源码分析-JDK1-8"><a href="#ArrayList源码分析-JDK1-8" class="headerlink" title="ArrayList源码分析(JDK1.8)"></a>ArrayList源码分析(JDK1.8)</h2><h4 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h4><p>ArrayList可以说是每一个学java的人使用最多最熟练的集合了，但是知其然不知其所以然。关于ArrayList的具体实现，一些基本的都也知道，譬如数组实现，线程不安全等等，但是更加具体的就很少去了解了，例如：初始化的长度，扩容等。</p>
+<p>本篇主要通过一些对源码的分析，讲解几个ArrayList常见的方法，和Vector的比较，以及线程安全并且效率高效的集合CopyOnWriteArrayList</p>
+<h4 id="属性"><a href="#属性" class="headerlink" title="属性"></a>属性</h4><pre><code>//实例化一个ArrayList集合
+ArrayList list = new ArrayList();
+</code></pre><p> 实例化一个ArrayList集合你知道背后发生了什么吗？</p>
+<p> ok,看一下构造方法</p>
+<pre><code> /**
+ * Constructs an empty list with an initial capacity of ten.
+ */
+public ArrayList() {
+    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+}
+</code></pre><p> 🤥DEFAULTCAPACITY_EMPTY_ELEMENTDATA 是什么鬼？ 很明显是个常量，那我们看一下ArrayList的属性</p>
+<p> 首先ArrayList默认容量为10</p>
+<pre><code> /**
+ * Default initial capacity.
+ */
+private static final int DEFAULT_CAPACITY = 10;
+</code></pre><p>属性 EMPTY_ELEMENTDATA 定义一个空实例的共享空数组实例。</p>
+<pre><code>/**
+ * Shared empty array instance used for empty instances.
+ */
+private static final Object[] EMPTY_ELEMENTDATA = {};
+</code></pre><p>属性DEFAULTCAPACITY_EMPTY_ELEMENTDATA 定义一个共享空数组实例，用于默认大小的空实例。将其与EMPTY_ELEMENTDATA区分开来，以了解扩容多少<br>添加第一个元素时。</p>
+<pre><code>/**
+ * Shared empty array instance used for default sized empty instances. We
+ * distinguish this from EMPTY_ELEMENTDATA to know how much to inflate when
+ * first element is added.
+ */
+private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+</code></pre><p>属性 elementData 存储ArrayList元素的数组缓冲区。ArrayList的容量是这个数组缓冲区的长度。任何<br>使用elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA实例化ArrayList时，将在添加第一个元素时扩展为DEFAULT_CAPACITY，也就是10，那现在我们就清楚构造方法中代码是什么意思了。</p>
+<pre><code>/**
+ * The array buffer into which the elements of the ArrayList are stored.
+ * The capacity of the ArrayList is the length of this array buffer. Any
+ * empty ArrayList with elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA
+ * will be expanded to DEFAULT_CAPACITY when the first element is added.
+ */
+transient Object[] elementData; // non-private to simplify nested class access
+</code></pre><p>属性 size 为ArrayList的长度</p>
+<pre><code>/**
+ * The size of the ArrayList (the number of elements it contains).
+ *
+ * @serial
+ */
+private int size;
+</code></pre><p>创建ArrayList对象除了使用无参构造方法new ArrayList()之外，还有有参的构造方法，让我们来分析一下</p>
+<h4 id="构造方法"><a href="#构造方法" class="headerlink" title="构造方法"></a>构造方法</h4><p>第一种： 指定初始容量去创建ArrayList对象</p>
+<pre><code>/**
+ * Constructs an empty list with the specified initial capacity.
+ *
+ * @param  initialCapacity  the initial capacity of the list
+ * @throws IllegalArgumentException if the specified initial capacity
+ *         is negative
+ */
+public ArrayList(int initialCapacity) {
+    if (initialCapacity &gt; 0) {
+        this.elementData = new Object[initialCapacity];
+    } else if (initialCapacity == 0) {
+        this.elementData = EMPTY_ELEMENTDATA;
+    } else {
+        throw new IllegalArgumentException(&quot;Illegal Capacity: &quot;+initialCapacity);
+    }
+}
+</code></pre><p>第二种： 前面已经提过，创建一个默认长度为10的空ArrayList对象</p>
+<pre><code>/**
+ * Constructs an empty list with an initial capacity of ten.
+ */
+public ArrayList() {
+    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+}
+</code></pre><p>第三种：生成一个带指定数据的ArrayList</p>
+<pre><code>    /**
+ * Constructs a list containing the elements of the specified
+ * collection, in the order they are returned by the collection&apos;s
+ * iterator.
+ *
+ * @param c the collection whose elements are to be placed into this list
+ * @throws NullPointerException if the specified collection is null
+ */
+public ArrayList(Collection&lt;? extends E&gt; c) {
+    elementData = c.toArray();
+    if ((size = elementData.length) != 0) {
+        // c.toArray might (incorrectly) not return Object[] (see 6260652)
+        if (elementData.getClass() != Object[].class)
+            elementData = Arrays.copyOf(elementData, size, Object[].class);
+    } else {
+        // replace with empty array.
+        this.elementData = EMPTY_ELEMENTDATA;
+    }
+}
+</code></pre><h4 id="常用方法"><a href="#常用方法" class="headerlink" title="常用方法"></a>常用方法</h4><p>最常用的莫过于添加方法 add() :</p>
+<pre><code>/**
+ * Appends the specified element to the end of this list.
+ *
+ * @param e element to be appended to this list
+ * @return &lt;tt&gt;true&lt;/tt&gt; (as specified by {@link Collection#add})
+ */
+public boolean add(E e) {
+    ensureCapacityInternal(size + 1);  // Increments modCount!!
+    elementData[size++] = e;
+    return true;
+}
+</code></pre><p>看的不是很明白，ensureCapacityInterna()是干什么的？通过方法名能明白是”先确保内部容量足够”那看一下方法实现</p>
+<pre><code>private void ensureCapacityInternal(int minCapacity) {
+    ensureExplicitCapacity(calculateCapacity(elementData, minCapacity));
+}
+
+private static int calculateCapacity(Object[] elementData, int minCapacity) {
+    if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+        return Math.max(DEFAULT_CAPACITY, minCapacity);
+    }
+    return minCapacity;
+}
+
+private void ensureExplicitCapacity(int minCapacity) {
+    modCount++;
+    // overflow-conscious code
+    if (minCapacity - elementData.length &gt; 0)
+        grow(minCapacity);
+}
+</code></pre><p>通过当前数组缓冲区，和添加一个元素之后的集合的长度，直接点说就是取最大值，计算容量<br>先确保容量足够，最后将元素加入到数组缓冲区相应位置，那么问题来了怎么保证容量足够，那看一下上面源码中保证容量足够的ensureExplicitCapacity()方法。</p>
+<p>modCount++  ：修改的次数  为什么要计算修改的次数呢，看过其他集合源码的，你会发现使用modCount的都是线程不安全的集合,所以呢这个modCount属性肯定和线程的安全性有关。那我们看一下modCount的定义，找了一圈发现ArrayList中并没有这个属性，那就在父类中了，最后呢我在父类AbstrackList中找到了这个属性，看一下他的定义</p>
+<pre><code>/**
+ * The number of times this list has been &lt;i&gt;structurally  modified&lt;/i&gt;. Structural modifications are  
+ * those that change the size of the list, or otherwise perturb it in such a fashion that iterations 
+ * in progress may yield incorrect results.
+ *
+ * &lt;p&gt;This field is used by the iterator and list iterator implementation returned by the {@code iterator} 
+ * and {@code listIterator} methods.If the value of this field changes unexpectedly, the iterator (or list
+ * iterator) will throw a {@code ConcurrentModificationException} in response to the {@code next}, {@code 
+ * remove}, {@code previous},{@code set} or {@code add} operations.  This provides &lt;i&gt;fail-fast&lt;/i&gt;  
+ * behavior,rather than non-deterministic behavior in the face of concurrent modification during iteration
+ *
+ * &lt;p&gt;&lt;b&gt;Use of this field by subclasses is optional.&lt;/b&gt; If a subclass wishes to provide fail-fast 
+ * iterators (and list iterators), then it merely has to increment this field in its {@code add(int, E)} 
+ * and {@code remove(int)} methods (and any other methods that it overrides that result in structural 
+ * modifications to the list).  A single call to {@code add(int, E)} or {@code remove(int)} must add no 
+ * more than one to this field, or the iterators (and list iterators) will throw bogus {@code 
+ * ConcurrentModificationExceptions}.  If an implementation does not wish to provide fail-fast iterators, 
+ * this field may be ignored.
+ */
+protected transient int modCount = 0;
+</code></pre><p>翻译过来，大意如下：</p>
+<pre><code>该字段表示list结构上被修改的次数。结构上的修改指的是那些改变了list的长度大小或者使得遍历过程中产生不正确的结果的其它方式。
+该字段被Iterator以及ListIterator的实现类所使用，如果该值被意外更改，Iterator或者ListIterator 将抛出ConcurrentModificationException异常，这是jdk在面对迭代遍历的时候为了避免不确定性而采取的快速失败原则。
+子类对此字段的使用是可选的，如果子类希望支持快速失败，只需要覆盖该字段相关的所有方法即可。单线程调用不能添加删除terator正在遍历的对象，否则将可能抛出ConcurrentModificationException异常，如果子类不希望支持快速失败，该字段可以直接忽略。
+</code></pre><p>如果你了解CAS算法的话，那你现在应该很清晰modCount的作用了。</p>
+<p>那我们接下来，就继续看下一段代码</p>
+<pre><code>if (minCapacity - elementData.length &gt; 0)
+        grow(minCapacity);
+</code></pre><p>如果所需的容量大于当前缓冲数组的容量的话，就会执行grow方法，也就是进行扩容，我感觉你感兴趣的东西来了，让我们一起去看看，扩容的实现。</p>
+<pre><code>/**
+ * Increases the capacity to ensure that it can hold at least the
+ * number of elements specified by the minimum capacity argument.
+ *
+ * @param minCapacity the desired minimum capacity
+ */
+private void grow(int minCapacity) {
+    // overflow-conscious code
+    int oldCapacity = elementData.length;
+    int newCapacity = oldCapacity + (oldCapacity &gt;&gt; 1);
+    if (newCapacity - minCapacity &lt; 0)
+        newCapacity = minCapacity;
+    if (newCapacity - MAX_ARRAY_SIZE &gt; 0)
+        newCapacity = hugeCapacity(minCapacity);
+    // minCapacity is usually close to size, so this is a win:
+    elementData = Arrays.copyOf(elementData, newCapacity);
+}
+</code></pre><p>怎么样，很清晰对吗，新容量扩大到原容量的1.5倍，右移一位相关于原数值除以2。然后呢，将原数组中的数据copy到新容量的数组里面。</p>
+
+            <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
+            <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
+                <source type="audio/mpeg" src>
+            </audio>
+            
+                <ul id="audio-list" style="display:none">
+                    
+                        <li title="0" data-url="http://link.hhtjim.com/163/5146554.mp3"></li>
+                    
+                        <li title="1" data-url="https://link.hhtjim.com/163/2781188.mp3"></li>
+                    
+                        <li title="2" data-url="https://link.hhtjim.com/163/4164331.mp3"></li>
+                    
+                        <li title="3" data-url="https://link.hhtjim.com/163/418602116.mp3"></li>
+                    
+                        <li title="4" data-url="https://link.hhtjim.com/163/521784134.mp3"></li>
+                    
+                        <li title="5" data-url="https://link.hhtjim.com/163/126946.mp3"></li>
+                    
+                        <li title="6" data-url="https://link.hhtjim.com/163/418603177.mp3"></li>
+                    
+                </ul>
+            
+        </div>
+        
+    <div id="gitalk-container" class="comment link" data-ae="false" data-ci data-cs data-r data-o data-a data-d="false">查看评论</div>
+
+
+    </div>
+    
+        <div class="side">
+            <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#ArrayList源码分析-JDK1-8"><span class="toc-number">1.</span> <span class="toc-text">ArrayList源码分析(JDK1.8)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#前言"><span class="toc-number">1.0.1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#属性"><span class="toc-number">1.0.2.</span> <span class="toc-text">属性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#构造方法"><span class="toc-number">1.0.3.</span> <span class="toc-text">构造方法</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#常用方法"><span class="toc-number">1.0.4.</span> <span class="toc-text">常用方法</span></a></li></ol></li></ol>
+        </div>
+    
+</div>
+
+
+    </div>
+</div>
+</body>
+<script src="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+<script src="//lib.baomitu.com/jquery/1.8.3/jquery.min.js"></script>
+<script src="/js/plugin.js"></script>
+<script src="/js/diaspora.js"></script>
+<link rel="stylesheet" href="/photoswipe/photoswipe.css">
+<link rel="stylesheet" href="/photoswipe/default-skin/default-skin.css">
+<script src="/photoswipe/photoswipe.min.js"></script>
+<script src="/photoswipe/photoswipe-ui-default.min.js"></script>
+
+<!-- Root element of PhotoSwipe. Must have class pswp. -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Background of PhotoSwipe. 
+         It's a separate element as animating opacity is faster than rgba(). -->
+    <div class="pswp__bg"></div>
+    <!-- Slides wrapper with overflow:hidden. -->
+    <div class="pswp__scroll-wrap">
+        <!-- Container that holds slides. 
+            PhotoSwipe keeps only 3 of them in the DOM to save memory.
+            Don't modify these 3 pswp__item elements, data is added later on. -->
+        <div class="pswp__container">
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+            <div class="pswp__item"></div>
+        </div>
+        <!-- Default (PhotoSwipeUI_Default) interface on top of sliding area. Can be changed. -->
+        <div class="pswp__ui pswp__ui--hidden">
+            <div class="pswp__top-bar">
+                <!--  Controls are self-explanatory. Order can be changed. -->
+                <div class="pswp__counter"></div>
+                <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                <button class="pswp__button pswp__button--share" title="Share"></button>
+                <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                <button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+                <!-- Preloader demo http://codepen.io/dimsemenov/pen/yyBWoR -->
+                <!-- element will get class pswp__preloader--active when preloader is running -->
+                <div class="pswp__preloader">
+                    <div class="pswp__preloader__icn">
+                      <div class="pswp__preloader__cut">
+                        <div class="pswp__preloader__donut"></div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+                <div class="pswp__share-tooltip"></div> 
+            </div>
+            <button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+            </button>
+            <button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+            </button>
+            <div class="pswp__caption">
+                <div class="pswp__caption__center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+</html>
