@@ -150,7 +150,9 @@ public ArrayList(Collection&lt;? extends E&gt; c) {
         this.elementData = EMPTY_ELEMENTDATA;
     }
 }
-</code></pre><h4 id="常用方法"><a href="#常用方法" class="headerlink" title="常用方法"></a>常用方法</h4><p>最常用的莫过于添加方法 add() :</p>
+</code></pre><h4 id="常用方法"><a href="#常用方法" class="headerlink" title="常用方法"></a>常用方法</h4><p>最常用的莫过于添加方法</p>
+<font color="blue">add(E e) :</font>
+
 <pre><code>/**
  * Appends the specified element to the end of this list.
  *
@@ -180,7 +182,7 @@ private void ensureExplicitCapacity(int minCapacity) {
     if (minCapacity - elementData.length &gt; 0)
         grow(minCapacity);
 }
-</code></pre><p>通过当前数组缓冲区，和添加一个元素之后的集合的长度，直接点说就是取最大值，计算容量<br>先确保容量足够，最后将元素加入到数组缓冲区相应位置，那么问题来了怎么保证容量足够，那看一下上面源码中保证容量足够的ensureExplicitCapacity()方法。</p>
+</code></pre><p>通过当前数组缓冲区，和添加一个元素之后的集合的长度，直接点说就是取最大值，计算容量<br>先确保容量足够，最后<font color="blue">将元素加入到数组缓冲区相应位置，做到元素的添加</font>，那么问题来了怎么保证容量足够，那看一下上面源码中保证容量足够的ensureExplicitCapacity()方法。</p>
 <p>modCount++  ：修改的次数  为什么要计算修改的次数呢，看过其他集合源码的，你会发现使用modCount的都是线程不安全的集合,所以呢这个modCount属性肯定和线程的安全性有关。那我们看一下modCount的定义，找了一圈发现ArrayList中并没有这个属性，那就在父类中了，最后呢我在父类AbstrackList中找到了这个属性，看一下他的定义</p>
 <pre><code>/**
  * The number of times this list has been &lt;i&gt;structurally  modified&lt;/i&gt;. Structural modifications are  
@@ -229,6 +231,85 @@ private void grow(int minCapacity) {
     elementData = Arrays.copyOf(elementData, newCapacity);
 }
 </code></pre><p>怎么样，很清晰对吗，新容量扩大到原容量的1.5倍，右移一位相关于原数值除以2。然后呢，将原数组中的数据copy到新容量的数组里面。</p>
+<p>第二种</p>
+<font color="blue">add (int index,E element)</font>
+
+<pre><code>/**
+ * Inserts the specified element at the specified position in this
+ * list. Shifts the element currently at that position (if any) and
+ * any subsequent elements to the right (adds one to their indices).
+ *
+ * @param index index at which the specified element is to be inserted
+ * @param element element to be inserted
+ * @throws IndexOutOfBoundsException {@inheritDoc}
+ */
+public void add(int index, E element) {
+    rangeCheckForAdd(index);
+
+    ensureCapacityInternal(size + 1);  // Increments modCount!!
+    System.arraycopy(elementData, index, elementData, index + 1,
+                     size - index);
+    elementData[index] = element;
+    size++;
+}
+</code></pre><p>将指定元素插入到列表中的指定位置。将当前位于该位置的元素(如果有的话)和随后的任何元素向右移动(将一个元素添加到它们的索引中)。 那看一下怎么实现的：</p>
+<p>首先rangeCheckForAdd(index);</p>
+<pre><code> /**
+ * A version of rangeCheck used by add and addAll.
+ */
+private void rangeCheckForAdd(int index) {
+    if (index &gt; size || index &lt; 0)
+        throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
+}
+</code></pre><p>指定的位置如果大于列表长度，或者小于0，会抛出一个异常IndexOutOfBoundsException，数组下标越界异常；<br>ensureCapacityInternal(size + 1); 上文已经说过，保证容量足够（因为需要向右移动），然后System.arraycopy(elementData, index, elementData, index + 1，size - index);就是将元素从index位置开始，复制到，从index+1位置开始，要copy的长度是index位置后面的所有元素。那这样下标index的位置就空了，elementData[index] = element;在这个位置加入我们要添加的元素。最后呢，长度+1。指定位置添加元素就是这样，很简单吧！</p>
+<p>不止有单个元素的添加，当然还有多元素添加，<font color="blue">addAll (Collection&lt;? extends E&gt;  c)</font> 和 <font color="blue">addAll(int index, Collection&lt;? extends E&gt; c)</font> ，多元素添加和指定位置多元素添加，原理和单元素是一样的，我这里就不再细说了。我把他们的源码贴出来，大家可以看下：</p>
+<font color="blue">addAll (Collection&lt;? extends E&gt;  c)</font> 
+
+<pre><code>public boolean addAll(Collection&lt;? extends E&gt; c) {
+    Object[] a = c.toArray();
+    int numNew = a.length;
+    ensureCapacityInternal(size + numNew);  // Increments modCount
+    System.arraycopy(a, 0, elementData, size, numNew);
+    size += numNew;
+    return numNew != 0;
+}
+</code></pre><font color="blue">addAll(int index, Collection&lt;? extends E&gt; c)</font>
+
+<pre><code>public boolean addAll(int index, Collection&lt;? extends E&gt; c) {
+    rangeCheckForAdd(index);
+    Object[] a = c.toArray();
+    int numNew = a.length;
+    ensureCapacityInternal(size + numNew);  // Increments modCount
+    int numMoved = size - index;
+    if (numMoved &gt; 0)
+        System.arraycopy(elementData, index, elementData, index + numNew,numMoved);
+    System.arraycopy(a, 0, elementData, index, numNew);
+    size += numNew;
+    return numNew != 0;
+}
+</code></pre><p>ok，那添加说完，咱们看看移除元素</p>
+<font color="blue">remove(int index)</font>
+
+<pre><code>  /**
+   * Removes the element at the specified position in this list.
+   * Shifts any subsequent elements to the left (subtracts one from their
+   * indices).
+   *
+   * @param index the index of the element to be removed
+   * @return the element that was removed from the list
+   * @throws IndexOutOfBoundsException {@inheritDoc}
+   */
+  public E remove(int index) {
+      rangeCheck(index);
+      modCount++;
+      E oldValue = elementData(index);
+      int numMoved = size - index - 1;
+      if (numMoved &gt; 0)
+          System.arraycopy(elementData, index+1, elementData, index, numMoved);
+      elementData[--size] = null; // clear to let GC do its work
+      return oldValue;
+}
+</code></pre><p>下班打卡——</p>
 
             <!--[if lt IE 9]><script>document.createElement('audio');</script><![endif]-->
             <audio id="audio" loop="1" preload="auto" controls="controls" data-autoplay="true">
